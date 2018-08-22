@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -29,18 +30,7 @@ public class ZipCodeRangeCondenser {
             log("filename=" + filename);
             ArrayList<int[]>  inputRanges = condenser.readRangesFromFile(filename);
             ArrayList<int[]> outputRanges = condenser.mergeInputRanges(inputRanges);
-
-            // print the results
-            if ( outputRanges == null ) {
-                System.out.println("No output ranges were created.");
-            } else {
-                for ( int i = 0; i < outputRanges.size(); i++) {
-                    int[] outputRange = (int[])outputRanges.get(i);
-                    System.out.println( "[" + String.format("%05d", outputRange[0]) +
-                                        "," + String.format("%05d", outputRange[1]) + "]" );
-                }
-            }
-
+            condenser.printResults(outputRanges);
         }
     }
 
@@ -156,6 +146,21 @@ public class ZipCodeRangeCondenser {
 
         return outputRanges;
     }
+
+    public void printResults(ArrayList<int[]> outputRanges) {
+
+        // print the results
+        if ( outputRanges == null ) {
+            System.out.println("No output ranges were created.");
+        } else {
+            for ( int i = 0; i < outputRanges.size(); i++) {
+                int[] outputRange = (int[])outputRanges.get(i);
+                System.out.println( "[" + String.format("%05d", outputRange[0]) +
+                                    "," + String.format("%05d", outputRange[1]) + "]" );
+            }
+        }
+    }
+
     // convert a line of text into an integer pair range, return null if there is a problem with the line
     public static int[] getBracketedRange(String input, int lineNumber) {
 
@@ -182,26 +187,27 @@ public class ZipCodeRangeCondenser {
 
             // validate the range values
             if ( range[0] < 0 || range[0] > 99999 ) {
-                log( "Error in line " + lineNumber + ":");
-                log( "  Invalid zip code: " + range[0]);
-                log( "  Must be between 00000 and 99999");
+                System.out.println( "Error in line " + lineNumber + ":");
+                System.out.println( "  Invalid zip code: " + range[0]);
+                System.out.println( "  Must be between 00000 and 99999");
                 return null;
             }
             if ( range[1] < 0 || range[1] > 99999 ) {
-                log( "Error in line " + lineNumber + ":");
-                log( "  Invalid zip code: " + range[1]);
-                log( "  Must be between 00000 and 99999");
+                System.out.println( "Error in line " + lineNumber + ":");
+                System.out.println( "  Invalid zip code: " + range[1]);
+                System.out.println( "  Must be between 00000 and 99999");
                 return null;
             }
             if ( range[0] > range[1]) {
-                log( "Error in line " + lineNumber + ":");
-                log( "  Invalid range: " + input);
-                log( "  First must be less than or equal to second");
+                System.out.println( "Error in line " + lineNumber + ":");
+                System.out.println( "  Invalid range: " + input);
+                System.out.println( "  First must be less than or equal to second");
                 return null;
 
             }
         } catch ( NumberFormatException e ) {
-            e.printStackTrace();
+            System.out.println( "Error in line " + lineNumber + ":");
+            System.out.println( "  Non numerical entry: " + input);
             return null;
         }
 
@@ -209,21 +215,21 @@ public class ZipCodeRangeCondenser {
     }
 
     public void runUnitTests() {
+        String testFilename = "testfile.txt";
 
         // verify that zero length input returns zero length output
         System.out.println("Running test 1");
-        ArrayList<int[]> inputRanges  = new ArrayList<int[]>();
+        writeFile(testFilename, "");
+        ArrayList<int[]> inputRanges  = readRangesFromFile(testFilename);
         ArrayList<int[]> outputRanges = mergeInputRanges(inputRanges);
         if ( ! ( outputRanges.size() == 0 ) ) {
             System.out.println("Failed test 1");
         }
 
-        // verify sample ranges
+        // positive test
         System.out.println("Running test 2");
-        inputRanges  = new ArrayList<int[]>();
-        inputRanges.add(new int[] {94133, 94133});
-        inputRanges.add(new int[] {94200, 94299});
-        inputRanges.add(new int[] {94600, 94699});
+        writeFile(testFilename, "[94133,94133]\n[94200,94299]\n[94600,94699]");
+        inputRanges  = readRangesFromFile(testFilename);
         outputRanges = mergeInputRanges(inputRanges);
         if ( ! ( outputRanges.size() == 3 ) )
             System.out.println("Failed test 2a");
@@ -237,12 +243,10 @@ public class ZipCodeRangeCondenser {
                                new int[] {94600, 94699} ) ) )
             System.out.println("Failed test 2d");
 
-        // verify sample ranges
+        // positive test
         System.out.println("Running test 3");
-        inputRanges  = new ArrayList<int[]>();
-        inputRanges.add(new int[] {94133, 94133});
-        inputRanges.add(new int[] {94200, 94299});
-        inputRanges.add(new int[] {94226, 94399});
+        writeFile(testFilename, "[94133,94133]\n[94200,94299]\n[94226,94399]");
+        inputRanges  = readRangesFromFile(testFilename);
         outputRanges = mergeInputRanges(inputRanges);
         if ( ! ( outputRanges.size() == 2 ) )
             System.out.println("Failed test 3a");
@@ -253,6 +257,48 @@ public class ZipCodeRangeCondenser {
                                new int[] {94200, 94399} ) ) )
             System.out.println("Failed test 3c");
 
+        // negative test, should not accept the aaaaa entry
+        System.out.println("Running test 4");
+        writeFile(testFilename, "[aaaaa,94133]\n[94200,94299]\n[94226,94399]");
+        inputRanges  = readRangesFromFile(testFilename);
+        if ( ! ( inputRanges.size() == 2 ) )
+            System.out.println("Failed test 4a");
+        if ( ! ( Arrays.equals((int[])inputRanges.get(0),
+                               new int[] {94200, 94133} ) ) )
+            System.out.println("Failed test 4b");
+        if ( ! ( Arrays.equals((int[])inputRanges.get(1),
+                               new int[] {94226, 94399} ) ) )
+            System.out.println("Failed test 4c");
+
+        // negative test, should not accept the -11111 entry
+        System.out.println("Running test 5");
+        writeFile(testFilename, "[-11111,94133]\n[94200,94299]\n[94226,94399]");
+        inputRanges  = readRangesFromFile(testFilename);
+        if ( ! ( inputRanges.size() == 2 ) )
+            System.out.println("Failed test 5a");
+        if ( ! ( Arrays.equals((int[])inputRanges.get(0),
+                               new int[] {94200, 94133} ) ) )
+            System.out.println("Failed test 5b");
+        if ( ! ( Arrays.equals((int[])inputRanges.get(1),
+                               new int[] {94226, 94399} ) ) )
+            System.out.println("Failed test 5c");
+
+        try {
+            Path file = FileSystems.getDefault().getPath(testFilename);
+            Files.delete(file);
+        } catch ( Exception e ) {
+            System.out.println("Failed to delete file: " + testFilename );
+        }
+    }
+
+    private void writeFile(String filename, String content) {
+        Path file = FileSystems.getDefault().getPath(filename);
+        Charset charset = Charset.forName("US-ASCII");
+        try (BufferedWriter writer = Files.newBufferedWriter(file, charset)) {
+            writer.write(content, 0, content.length());
+        } catch (IOException x) {
+            System.err.format("IOException: %s%n", x);
+        }
     }
 
     private class RangeSorter implements Comparator<int[]> {
