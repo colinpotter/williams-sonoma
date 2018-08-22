@@ -1,10 +1,12 @@
 # williams-sonoma
 
-## Compile the code:
+## Compiling:
 javac ZipCodeRangeCondenser
 
-## Run the code:
+## Running the code:
+The input filename can be whatever you like. The file zip_ranges.txt is included with some sample ranges.
+
 java ZipCodeRangeCondenser zip_ranges.txt
 
-## Test the code:
+## Running the tests:
 java ZipCodeRangeCondenser -test
