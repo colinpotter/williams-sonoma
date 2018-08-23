@@ -6,9 +6,10 @@ This code was built using Java 8. It will read in a specified file, which should
 javac ZipCodeRangeCondenser.java
 
 ## Running the code:
-java ZipCodeRangeCondenser zip_ranges.txt
+java ZipCodeRangeCondenser -i zip_ranges.txt
 
 The input filename can be whatever you like. The file zip_ranges.txt is included with some sample ranges.
+You can pass the -d flag to show verbose debugging output.
 
 ## Running the tests:
 java ZipCodeRangeCondenser -test
